@@ -373,11 +373,22 @@ def _secret(name: str) -> str:
 
 
 @st.cache_resource
+def _supabase_store(url: str, key: str):
+    return SupabaseStore(url, key)
+
+
+@st.cache_resource
+def _sqlite_store():
+    return SQLiteStore()
+
+
 def get_store():
+    # Not cached as a whole: if the secrets were missing on one run, the app must still
+    # switch to Supabase as soon as they appear (instead of staying stuck on SQLite).
     url, key = _secret("SUPABASE_URL"), _secret("SUPABASE_KEY")
     if url and key:
-        return SupabaseStore(url, key)
-    return SQLiteStore()
+        return _supabase_store(url, key)
+    return _sqlite_store()
 
 
 # ═════════════════════════════ Reference / seed data ══════════════════════
