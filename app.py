@@ -366,6 +366,12 @@ class SQLiteStore:
             self.conn.execute(f"DELETE FROM {table}")
 
 
+# Publishable (anon) key only. NEVER put the secret / service_role key in code.
+DEFAULT_SUPABASE_URL = "https://msyptbvwkphcttdaiiny.supabase.co"
+DEFAULT_SUPABASE_KEY = "sb_publishable_A5nwJXQRtvAr-bnFvSvqAw_gUl6uvza"
+BUILD = "v3"
+
+
 def _secret(name: str) -> str:
     try:
         return str(st.secrets.get(name, "") or "")
@@ -398,6 +404,9 @@ def get_store():
         holder["url"], holder["key"] = url, key
     else:
         url, key = holder.get("url", ""), holder.get("key", "")
+    if not (url and key):
+        # Last resort: the project URL and PUBLISHABLE key (safe to publish by design).
+        url, key = DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY
     if url and key:
         return _supabase_store(url, key)
     return _sqlite_store()
@@ -652,9 +661,9 @@ with st.sidebar:
                                                             if p == "Dashboard" else ""))
     st.divider()
     if isinstance(store, SupabaseStore):
-        st.caption("🟢 Data saved to **Supabase** — persists across sessions.")
+        st.caption(f"🟢 Data saved to **Supabase** — persists across sessions. (build {BUILD})")
     else:
-        st.caption("🟡 Using a **local SQLite file**. Add Supabase secrets to keep data online.")
+        st.caption(f"🟡 Using a **local SQLite file**. Add Supabase secrets to keep data online. (build {BUILD})")
     with st.expander("Demo tools"):
         confirm = st.checkbox("I understand this deletes all data")
         if st.button("Reset demo data", disabled=not confirm):
