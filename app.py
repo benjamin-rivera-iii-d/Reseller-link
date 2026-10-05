@@ -24,6 +24,7 @@ import difflib
 import io
 import random
 import re
+import os
 import sqlite3
 import threading
 from dataclasses import dataclass, field
@@ -382,10 +383,21 @@ def _sqlite_store():
     return SQLiteStore()
 
 
+@st.cache_resource
+def _cred_holder() -> dict:
+    return {}
+
+
 def get_store():
-    # Not cached as a whole: if the secrets were missing on one run, the app must still
-    # switch to Supabase as soon as they appear (instead of staying stuck on SQLite).
-    url, key = _secret("SUPABASE_URL"), _secret("SUPABASE_KEY")
+    # Remember the last good credentials, so one failed/empty secrets read on a later page
+    # change can never silently drop the app back to the local SQLite file.
+    holder = _cred_holder()
+    url = _secret("SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
+    key = _secret("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY", "")
+    if url and key:
+        holder["url"], holder["key"] = url, key
+    else:
+        url, key = holder.get("url", ""), holder.get("key", "")
     if url and key:
         return _supabase_store(url, key)
     return _sqlite_store()
